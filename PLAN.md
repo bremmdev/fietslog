@@ -88,7 +88,8 @@ fietslog/
 │   ├── Fietslog.Worker.csproj
 │   ├── Program.cs                # host, options, DI
 │   ├── BotOptions.cs             # token, allowed user id, db path, time zone
-│   ├── TelegramPollingService.cs # BackgroundService: receive loop, auth, reply
+│   ├── TelegramPollingService.cs # BackgroundService: receive loop, send replies
+│   ├── RideMessageHandler.cs     # auth, parse, store, choose reply (no Telegram types)
 │   ├── RideParser.cs             # string -> ParseResult (pure, no I/O)
 │   ├── Ride.cs                   # record type
 │   ├── RideRepository.cs         # Dapper insert
@@ -96,7 +97,10 @@ fietslog/
 │   └── Messages.cs               # Dutch reply strings/formatting
 └── tests/Fietslog.Worker.Tests/
     ├── RideParserTests.cs        # table-driven parser cases
-    └── RideRepositoryTests.cs    # temp-file SQLite, insert + duplicate message id
+    ├── RideRepositoryTests.cs    # temp-file SQLite, insert + duplicate message id
+    ├── RideMessageHandlerTests.cs # auth, help, errors, Amsterdam "today"
+    ├── MessagesTests.cs          # Dutch formatting
+    └── TempDatabase.cs           # test fixture
 ```
 
 ## Worker flow
@@ -124,7 +128,7 @@ fietslog/
 1. **Dockerfile**: multi-stage build, `mcr.microsoft.com/dotnet/sdk:10.0` to build and `mcr.microsoft.com/dotnet/runtime:10.0` to run. The runtime is the Debian image rather than the chiseled one, so it includes `tzdata` for `Europe/Amsterdam`.
 2. **railway.json**: `builder: DOCKERFILE`, `numReplicas: 1`, `restartPolicyType: ON_FAILURE`. No healthcheck path, because the service has no HTTP endpoint.
 3. **Volume**: attach a volume to the service at mount path `/data`, in the dashboard or with `railway volume add --mount-path /data`.
-4. **Permissions**: .NET images run as the non-root `app` user, but Railway mounts volumes as root. Set `RAILWAY_RUN_UID=0` on the service, or the worker can't write the database.
+4. **Permissions**: Railway mounts volumes as root. The .NET 10 runtime image runs as root unless `USER $APP_UID` is set, so no extra setting is needed. If the image is later switched to the non-root `app` user, set `RAILWAY_RUN_UID=0`.
 5. **Variables**: set `Bot__Token` and `Bot__AllowedUserId`.
 6. **Single instance**: Telegram allows only one `getUpdates` consumer per bot, and a volume attaches to one replica. Keep replicas at 1. Railway stops the old container before starting the new one on services with a volume, so polling doesn't conflict during a deploy.
 
