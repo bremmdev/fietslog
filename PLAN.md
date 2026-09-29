@@ -106,7 +106,7 @@ fietslog/
 
 ## Worker flow
 
-1. At startup, validate options (fail fast if the token or user ID is missing or the token is malformed), create the `/data` directory if needed, and initialise the schema. Then check the token with `getMe` and exit with code 1 if Telegram rejects it (401/404). Network errors are not fatal; polling retries them.
+1. At startup, validate options (fail fast if the token or user ID is missing or the token is malformed), create the `/data` directory if needed, and initialise the schema. Then check the token with `getMe` and exit with code 1 if Telegram rejects it (401/404). If polling later gets a 401/404 (e.g. the token was revoked), the worker stops and exits with code 1. Network errors are not fatal; polling retries them.
 2. `TelegramPollingService` calls `bot.ReceiveAsync(...)` with `AllowedUpdates = [Message]` and `DropPendingUpdates = false`, so rides sent while the worker was down (for example, during a redeploy) are still processed. Telegram keeps them for 24 hours.
 3. For each message:
    - `from.id != AllowedUserId`: log and ignore, with no reply.

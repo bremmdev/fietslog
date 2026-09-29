@@ -10,6 +10,7 @@ namespace Fietslog.Worker;
 public sealed class TelegramPollingService(
     ITelegramBotClient bot,
     RideMessageHandler handler,
+    BotTokenVerifier tokenVerifier,
     ILogger<TelegramPollingService> logger) : BackgroundService
 {
     private static readonly TimeSpan PollingErrorDelay = TimeSpan.FromSeconds(5);
@@ -47,12 +48,16 @@ public sealed class TelegramPollingService(
     private async Task HandleErrorAsync(
         ITelegramBotClient client, Exception exception, HandleErrorSource source, CancellationToken cancellationToken)
     {
-        if (exception is ApiRequestException { ErrorCode: 409 })
-            logger.LogError("Another instance is polling this bot (409 Conflict). Run exactly one replica.");
-        else
-            logger.LogError(exception, "Telegram {Source}", source);
+        // A rejected token (e.g. revoked) is logged by the verifier, which also stops the host.
+        if (!tokenVerifier.StopIfRejected(exception))
+        {
+            if (exception is ApiRequestException { ErrorCode: 409 })
+                logger.LogError("Another instance is polling this bot (409 Conflict). Run exactly one replica.");
+            else
+                logger.LogError(exception, "Telegram {Source}", source);
+        }
 
-        // Avoid a tight retry loop when Telegram or the network is unavailable.
+        // Avoid a tight retry loop when Telegram or the network is unavailable, or polling again while stopping.
         if (source == HandleErrorSource.PollingError)
             await Task.Delay(PollingErrorDelay, cancellationToken);
     }

@@ -31,9 +31,12 @@ var host = builder.Build();
 // Fail fast (non-zero exit, so Railway restarts/flags the deploy) on bad config or an unwritable volume.
 host.Services.GetRequiredService<Database>().Initialize();
 
-// Checked here rather than in the polling service: a failing hosted service stops the host with exit code 0.
-if (!await host.Services.GetRequiredService<BotTokenVerifier>().VerifyAsync())
+// Exit codes are set here because a failing hosted service stops the host with exit code 0.
+var tokenVerifier = host.Services.GetRequiredService<BotTokenVerifier>();
+if (!await tokenVerifier.VerifyAsync())
     return 1;
 
 await host.RunAsync();
-return 0;
+
+// The polling service stops the host if Telegram rejects the token later (e.g. it was revoked).
+return tokenVerifier.Rejected ? 1 : 0;
