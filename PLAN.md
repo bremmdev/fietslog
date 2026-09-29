@@ -34,7 +34,7 @@ A message contains one ride token and, optionally, one date token, separated by 
 | `16km` | 16 km, today, no duration, no speed |
 | `20km@52:34` | 20 km, 3154 s, speed **computed** as 22.83 km/h |
 | `20km@23.3km/h` | 20 km, 23.3 km/h, duration **computed** as 3090 s |
-| `20km@52:12@24km/h` | 20 km, 3132 s, 24 km/h, **both as given** (no cross-check) |
+| `20km@52:12@24km/h` | 20 km, 3132 s, 24 km/h, **both as given**, warning if they don't match |
 | `20,5km@1:02:10 30-08-2026` | 20.5 km, 3730 s, 19.79 km/h (computed), 2026-08-30 |
 
 A message is rejected, with a Dutch error reply, when:
@@ -70,7 +70,7 @@ CREATE TABLE IF NOT EXISTS rides (
 );
 ```
 
-When only one of duration or speed is given, the other is computed and stored. When both are given, both are stored exactly as typed. `raw_text` records what was actually entered.
+When only one of duration or speed is given, the other is computed and stored. When both are given, both are stored exactly as typed. If they don't match the distance, the reply adds a warning. The check allows for rounding: half a unit of the last typed digit for distance and speed, one second for the time, plus 1%. `raw_text` records what was actually entered.
 
 Connection setup: `PRAGMA journal_mode=WAL; PRAGMA busy_timeout=5000;`. Only one process ever opens the file.
 

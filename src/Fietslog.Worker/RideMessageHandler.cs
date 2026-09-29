@@ -34,13 +34,16 @@ public sealed class RideMessageHandler(
                 logger.LogInformation("Could not parse message {MessageId}: {Error}", messageId, failure.Error);
                 return Messages.ParseError(failure.Error);
 
-            case ParseResult.Success { Ride: var ride }:
+            case ParseResult.Success { Ride: var ride, TimeSpeedMismatch: var mismatch }:
                 try
                 {
                     var inserted = await repository.AddAsync(
                         ride, text, chatId, messageId, timeProvider.GetUtcNow(), cancellationToken);
-                    logger.LogInformation("Message {MessageId}: {Ride} (inserted: {Inserted})", messageId, ride, inserted);
-                    return inserted ? Messages.Saved(ride) : Messages.AlreadySaved(ride);
+                    logger.LogInformation(
+                        "Message {MessageId}: {Ride} (inserted: {Inserted}, time/speed mismatch: {Mismatch})",
+                        messageId, ride, inserted, mismatch);
+                    var reply = inserted ? Messages.Saved(ride) : Messages.AlreadySaved(ride);
+                    return mismatch ? $"{reply}\n{Messages.TimeSpeedMismatch(ride)}" : reply;
                 }
                 catch (Exception ex) when (ex is not OperationCanceledException)
                 {

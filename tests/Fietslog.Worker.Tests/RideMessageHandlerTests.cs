@@ -43,6 +43,37 @@ public sealed class RideMessageHandlerTests : IDisposable
     }
 
     [Fact]
+    public async Task Stores_mismatched_time_and_speed_with_a_warning()
+    {
+        var reply = await Send("20km@52:34@60km/u");
+
+        Assert.Equal(
+            "✅ Opgeslagen: 20 km op 28-09-2026 · 52:34 · 60,0 km/u\n" +
+            "⚠️ Tijd en snelheid komen niet overeen: 20 km in 52:34 is gemiddeld 22,8 km/u, niet 60,0 km/u. " +
+            "Beide zijn opgeslagen zoals ingevoerd.",
+            reply);
+        var stored = Assert.Single(await _repository.GetAllAsync());
+        Assert.Equal(3154, stored.DurationSeconds);
+        Assert.Equal(60, stored.AvgSpeedKmh);
+    }
+
+    [Fact]
+    public async Task Redelivered_mismatched_message_repeats_the_warning()
+    {
+        await Send("20km@52:34@60km/u", messageId: 5);
+        var reply = await Send("20km@52:34@60km/u", messageId: 5);
+
+        Assert.StartsWith("ℹ️ Al opgeslagen", reply);
+        Assert.Contains("⚠️ Tijd en snelheid komen niet overeen", reply);
+    }
+
+    [Fact]
+    public async Task Matching_time_and_speed_get_no_warning()
+    {
+        Assert.Equal("✅ Opgeslagen: 20 km op 28-09-2026 · 52:12 · 24,0 km/u", await Send("20km@52:12@24km/h"));
+    }
+
+    [Fact]
     public async Task Ignores_other_users_silently()
     {
         Assert.Null(await Send("20km", userId: 999));

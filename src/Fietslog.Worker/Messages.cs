@@ -30,6 +30,15 @@ public static class Messages
 
     public static string ParseError(string error) => $"❌ {error}\nVoorbeelden: {Examples}";
 
+    /// <summary>Warning for a ride whose typed time and speed do not match its distance.</summary>
+    public static string TimeSpeedMismatch(Ride ride)
+    {
+        var actualSpeed = ride.DistanceKm / (ride.DurationSeconds!.Value / 3600.0);
+        return $"⚠️ Tijd en snelheid komen niet overeen: {FormatNumber(ride.DistanceKm, "0.##")} km in " +
+               $"{FormatDuration(ride.DurationSeconds.Value)} is gemiddeld {FormatNumber(actualSpeed, "0.0")} km/u, " +
+               $"niet {FormatNumber(ride.AvgSpeedKmh!.Value, "0.0")} km/u. Beide zijn opgeslagen zoals ingevoerd.";
+    }
+
     public static string Describe(Ride ride)
     {
         var text = $"{FormatNumber(ride.DistanceKm, "0.##")} km op {ride.Date.ToString("dd-MM-yyyy", CultureInfo.InvariantCulture)}";

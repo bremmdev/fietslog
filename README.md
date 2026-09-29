@@ -15,7 +15,7 @@ Send the bot a message in this form:
 | `16km` | 16 km today |
 | `20km@52:34` | 20 km, 52:34, speed computed (22.83 km/h) |
 | `20km@23,3km/u` | 20 km, 23.3 km/h, time computed (51:30) |
-| `20km@52:12@24km/h` | both stored as given |
+| `20km@52:12@24km/h` | both stored as given, with a warning if they don't match |
 | `20,5km@1:02:10 30-08-2026` | on 30 August 2026 |
 
 - **Time:** `mm:ss` or `h:mm:ss`. A two-part time is always minutes:seconds, so `1:05` is 65 seconds.
@@ -85,6 +85,6 @@ rides(id, ride_date 'yyyy-mm-dd', distance_km, duration_seconds, avg_speed_kmh,
       raw_text, telegram_chat_id, telegram_message_id, created_at_utc)
 ```
 
-- **Time and speed:** when you give only one, the other is computed and stored.
+- **Time and speed:** when you give only one, the other is computed and stored. When you give both, both are stored as typed. If they don't match the distance, the reply includes a warning. Rounding doesn't trigger the warning: each number may be off by half its last typed digit (`20km` could be 19.5–20.5), the time by a second, and there's 1% extra slack on top.
 - **Original message:** `raw_text` always keeps what you typed.
 - **Duplicates:** a message Telegram delivers twice is stored once, because `(telegram_chat_id, telegram_message_id)` is unique.

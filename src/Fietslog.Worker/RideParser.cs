@@ -5,7 +5,10 @@ namespace Fietslog.Worker;
 
 public abstract record ParseResult
 {
-    public sealed record Success(Ride Ride) : ParseResult;
+    /// <param name="TimeSpeedMismatch">
+    /// Both time and speed were typed and they do not match the distance, even allowing for rounding.
+    /// </param>
+    public sealed record Success(Ride Ride, bool TimeSpeedMismatch = false) : ParseResult;
 
     /// <param name="Error">Dutch description of what was wrong.</param>
     public sealed record Failure(string Error) : ParseResult;
@@ -23,6 +26,9 @@ public static partial class RideParser
     // Plausible average cycling speeds; catches typos such as 1:05 meant as 1 hour 5 minutes.
     public const double MinSpeedKmh = 1;
     public const double MaxSpeedKmh = 100;
+
+    // Extra tolerance on top of rounding, for devices that average over unrounded values.
+    private const double MismatchTolerance = 0.01;
 
     private const string Number = @"(\d+(?:[.,]\d+)?)";
 
@@ -103,12 +109,14 @@ public static partial class RideParser
         var distanceMatch = Distance().Match(parts[0]);
         if (!distanceMatch.Success)
             return Fail($"Ongeldige afstand: '{parts[0]}'.");
-        var distance = ParseNumber(distanceMatch.Groups[1].Value);
+        var distanceText = distanceMatch.Groups[1].Value;
+        var distance = ParseNumber(distanceText);
         if (distance <= 0 || distance > MaxDistanceKm)
             return Fail($"Afstand moet tussen 0 en {MaxDistanceKm:0} km liggen.");
 
         int? duration = null;
         double? speed = null;
+        string? speedText = null;
 
         foreach (var part in parts.Skip(1))
         {
@@ -116,7 +124,8 @@ public static partial class RideParser
             {
                 if (speed is not null)
                     return Fail("Snelheid staat er meer dan één keer in.");
-                speed = ParseNumber(speedMatch.Groups[1].Value);
+                speedText = speedMatch.Groups[1].Value;
+                speed = ParseNumber(speedText);
                 if (speed is < MinSpeedKmh or > MaxSpeedKmh)
                     return Fail($"Snelheid moet tussen {MinSpeedKmh:0} en {MaxSpeedKmh:0} km/u liggen.");
             }
@@ -134,7 +143,8 @@ public static partial class RideParser
             }
         }
 
-        // Derive the missing one; when both are given they are kept as typed.
+        // Derive the missing one; when both are given they are kept as typed but checked against each other.
+        var mismatch = false;
         if (duration is int s && speed is null)
         {
             speed = Math.Round(distance / (s / 3600.0), 2);
@@ -149,8 +159,35 @@ public static partial class RideParser
             if (duration < 1)
                 return Fail("Berekende tijd is korter dan 1 seconde. Controleer afstand en snelheid.");
         }
+        else if (duration is int typedSeconds && speed is double typedSpeed)
+        {
+            mismatch = !TimeAndSpeedMatch(distance, distanceText, typedSeconds, typedSpeed, speedText!);
+        }
 
-        return new ParseResult.Success(new Ride(rideDate, distance, duration, speed));
+        return new ParseResult.Success(new Ride(rideDate, distance, duration, speed), mismatch);
+    }
+
+    /// <summary>
+    /// Whether the typed speed fits the typed distance and time, assuming distance and speed were rounded to
+    /// the digits typed (so <c>20km</c> may be 19.5–20.5), the time may be off by a second, plus
+    /// <see cref="MismatchTolerance"/>.
+    /// </summary>
+    private static bool TimeAndSpeedMatch(
+        double distance, string distanceText, int seconds, double speed, string speedText)
+    {
+        var distanceMargin = RoundingMargin(distanceText);
+        var speedMargin = RoundingMargin(speedText);
+        var slowest = (distance - distanceMargin) / ((seconds + 1) / 3600.0) * (1 - MismatchTolerance);
+        var fastest = (distance + distanceMargin) / (Math.Max(seconds - 1, 0.5) / 3600.0) * (1 + MismatchTolerance);
+        return speed + speedMargin >= slowest && speed - speedMargin <= fastest;
+    }
+
+    /// <summary>Half a unit of the last typed digit: 0.5 for "20", 0.05 for "20,5".</summary>
+    private static double RoundingMargin(string number)
+    {
+        var separator = number.IndexOfAny(['.', ',']);
+        var decimals = separator < 0 ? 0 : number.Length - separator - 1;
+        return 0.5 * Math.Pow(10, -decimals);
     }
 
     private static int? ParseDuration(Match m)

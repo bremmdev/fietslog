@@ -97,6 +97,45 @@ public class RideParserTests
         Assert.Equal(185, ride.DurationSeconds);
     }
 
+    [Theory]
+    // Matching within rounding of the typed digits
+    [InlineData("20km@52:34@22,8km/u", false)]      // exact: 22.83
+    [InlineData("20km@52:12@24km/h", false)]        // 20 km may be 20.5 -> 23.57, 24 may be 23.5
+    [InlineData("20km@52:34@23,5km/u", false)]      // 20 km may be 20.5 -> 23.40, plus 1%
+    [InlineData("20,5km@1:02:10@19,8km/u", false)]  // exact: 19.79
+    [InlineData("20,0km@52:34@22,7km/u", false)]    // device truncated 22.83 to 22.7
+    [InlineData("20km@24km/h@52:12", false)]        // order does not matter
+    // Not matching
+    [InlineData("20,00km@52:34@23,5km/u", true)]    // precise distance leaves no room: 22.83
+    [InlineData("20km@52:34@25km/u", true)]
+    [InlineData("20km@52:34@20km/u", true)]
+    [InlineData("20km@52:34@60km/u", true)]
+    [InlineData("16km@1:05@24km/u", true)]          // 1:05 is 65 seconds
+    public void Flags_typed_time_and_speed_that_do_not_match(string input, bool mismatch)
+    {
+        var success = Assert.IsType<ParseResult.Success>(RideParser.Parse(input, Today));
+
+        Assert.Equal(mismatch, success.TimeSpeedMismatch);
+    }
+
+    [Theory]
+    [InlineData("16km")]
+    [InlineData("20km@52:34")]
+    [InlineData("20km@23,3km/u")]
+    public void Does_not_flag_when_time_or_speed_is_computed(string input)
+    {
+        Assert.False(Assert.IsType<ParseResult.Success>(RideParser.Parse(input, Today)).TimeSpeedMismatch);
+    }
+
+    [Fact]
+    public void Mismatched_ride_keeps_typed_values()
+    {
+        var ride = Assert.IsType<ParseResult.Success>(RideParser.Parse("20km@52:34@60km/u", Today)).Ride;
+
+        Assert.Equal(3154, ride.DurationSeconds);
+        Assert.Equal(60, ride.AvgSpeedKmh);
+    }
+
     [Fact]
     public void Implausible_computed_speed_is_reported()
     {

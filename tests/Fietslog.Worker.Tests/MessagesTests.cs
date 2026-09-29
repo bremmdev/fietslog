@@ -20,6 +20,17 @@ public class MessagesTests
         Assert.Equal("20,5 km op 30-08-2026", Messages.Describe(ride));
     }
 
+    [Fact]
+    public void Describes_time_and_speed_mismatch()
+    {
+        var ride = new Ride(new DateOnly(2026, 9, 28), 20, 3154, 60);
+
+        Assert.Equal(
+            "⚠️ Tijd en snelheid komen niet overeen: 20 km in 52:34 is gemiddeld 22,8 km/u, niet 60,0 km/u. " +
+            "Beide zijn opgeslagen zoals ingevoerd.",
+            Messages.TimeSpeedMismatch(ride));
+    }
+
     [Theory]
     [InlineData(65, "1:05")]
     [InlineData(3154, "52:34")]
