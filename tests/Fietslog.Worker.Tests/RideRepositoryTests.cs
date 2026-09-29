@@ -16,7 +16,7 @@ public sealed class RideRepositoryTests : IDisposable
     [Fact]
     public async Task Stores_all_fields()
     {
-        var ride = new Ride(new DateOnly(2026, 8, 30), 20.5, 3730, 19.79);
+        var ride = new Ride(new DateOnly(2026, 8, 30), 20.5, 3730, 19.8);
 
         Assert.True(await _repository.AddAsync(ride, "20,5km@1:02:10 30-08-2026", 42, 7, CreatedAt));
 
@@ -24,7 +24,7 @@ public sealed class RideRepositoryTests : IDisposable
         Assert.Equal("2026-08-30", stored.RideDate);
         Assert.Equal(20.5, stored.DistanceKm);
         Assert.Equal(3730, stored.DurationSeconds);
-        Assert.Equal(19.79, stored.AvgSpeedKmh);
+        Assert.Equal(19.8, stored.AvgSpeedKmh);
         Assert.Equal("20,5km@1:02:10 30-08-2026", stored.RawText);
         Assert.Equal(42, stored.TelegramChatId);
         Assert.Equal(7, stored.TelegramMessageId);

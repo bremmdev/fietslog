@@ -132,7 +132,7 @@ public static partial class RideParser
 
         // Derive the missing one; when both are given they are kept as typed.
         if (duration is int s && speed is null)
-            speed = Math.Round(distance / (s / 3600.0), 2);
+            speed = Math.Round(distance / (s / 3600.0), 1);
         else if (speed is double v && duration is null)
             duration = (int)Math.Round(distance / v * 3600);
 
