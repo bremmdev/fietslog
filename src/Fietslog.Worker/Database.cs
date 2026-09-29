@@ -18,6 +18,8 @@ public sealed class Database(string path)
     {
         var connection = new SqliteConnection(_connectionString);
         connection.Open();
+        // synchronous is per-connection (not stored in the file), so it has to be set on every open.
+        connection.Execute("PRAGMA synchronous = FULL;");
         return connection;
     }
 
@@ -32,9 +34,15 @@ public sealed class Database(string path)
         connection.Execute("PRAGMA journal_mode = WAL;");
 
         var version = connection.ExecuteScalar<long>("PRAGMA user_version;");
-        if (version >= SchemaVersion)
-            return;
+        if (version < SchemaVersion)
+            Migrate(connection, version);
 
+        // Refresh query-planner statistics: 0x10000 checks every table, 0x02 runs ANALYZE where it's stale.
+        connection.Execute("PRAGMA optimize = 0x10002;");
+    }
+
+    private static void Migrate(SqliteConnection connection, long version)
+    {
         using var transaction = connection.BeginTransaction();
         if (version < 1)
         {
