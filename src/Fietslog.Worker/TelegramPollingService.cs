@@ -16,17 +16,6 @@ public sealed class TelegramPollingService(
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
-        try
-        {
-            var me = await bot.GetMe(stoppingToken);
-            logger.LogInformation("Polling Telegram as @{Username}", me.Username);
-        }
-        catch (Exception ex) when (ex is not OperationCanceledException)
-        {
-            // Not fatal: the polling loop below retries and logs persistent failures (e.g. a bad token).
-            logger.LogWarning(ex, "Could not reach Telegram at startup");
-        }
-
         var receiverOptions = new ReceiverOptions
         {
             AllowedUpdates = [UpdateType.Message],

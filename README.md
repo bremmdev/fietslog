@@ -38,7 +38,7 @@ Send the bot a message in this form:
 | `Bot__DatabasePath` | no | `/data/fietslog.db` (`data/fietslog.db` in Development) |
 | `Bot__TimeZone` | no | `Europe/Amsterdam` |
 
-The worker exits at startup if the token or user ID is missing.
+The worker exits at startup with a non-zero code if the token or user ID is missing, if the token isn't in BotFather's `123456:ABC...` format, or if Telegram rejects the token. If Telegram can't be reached at startup, the worker still starts and keeps retrying.
 
 ## Running locally
 
