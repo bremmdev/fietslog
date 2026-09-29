@@ -70,7 +70,7 @@ CREATE TABLE IF NOT EXISTS rides (
 );
 ```
 
-When only one of duration or speed is given, the other is computed and stored. When both are given, both are stored exactly as typed. If they don't match the distance, the reply adds a warning. The check allows for rounding: half a unit of the last typed digit for distance and speed, one second for the time, plus 1%. `raw_text` records what was actually entered.
+When only one of duration or speed is given, the other is computed and stored. When both are given, both are stored exactly as typed. If they don't match the distance, the reply adds a warning. The check is loose on purpose. It allows half a unit of the last typed digit for distance, 1 minute for the time and 0.5 km/h for the speed. `raw_text` records what was actually entered.
 
 Connection setup: `PRAGMA journal_mode=WAL; PRAGMA busy_timeout=5000;`. Only one process ever opens the file.
 

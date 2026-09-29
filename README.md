@@ -85,6 +85,6 @@ rides(id, ride_date 'yyyy-mm-dd', distance_km, duration_seconds, avg_speed_kmh,
       raw_text, telegram_chat_id, telegram_message_id, created_at_utc)
 ```
 
-- **Time and speed:** when you give only one, the other is computed and stored. When you give both, both are stored as typed. If they don't match the distance, the reply includes a warning. Rounding doesn't trigger the warning: each number may be off by half its last typed digit (`20km` could be 19.5–20.5), the time by a second, and there's 1% extra slack on top.
+- **Time and speed:** when you give only one, the other is computed and stored. When you give both, both are stored as typed. If they don't match the distance, the reply includes a warning. The check is loose on purpose, so small differences don't trigger it. The distance may be off by half its last typed digit (`20km` could be 19.5–20.5), the time by 1 minute, and the speed by 0.5 km/h.
 - **Original message:** `raw_text` always keeps what you typed.
 - **Duplicates:** a message Telegram delivers twice is stored once, because `(telegram_chat_id, telegram_message_id)` is unique.

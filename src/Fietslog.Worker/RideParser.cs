@@ -27,8 +27,9 @@ public static partial class RideParser
     public const double MinSpeedKmh = 1;
     public const double MaxSpeedKmh = 100;
 
-    // Extra tolerance on top of rounding, for devices that average over unrounded values.
-    private const double MismatchTolerance = 0.01;
+    // Loose on purpose: the time is often read off a watch mid-ride, and a missed warning is better than a false one.
+    private const int MismatchTimeMarginSeconds = 60;
+    private const double MismatchSpeedMarginKmh = 0.5;
 
     private const string Number = @"(\d+(?:[.,]\d+)?)";
 
@@ -116,7 +117,6 @@ public static partial class RideParser
 
         int? duration = null;
         double? speed = null;
-        string? speedText = null;
 
         foreach (var part in parts.Skip(1))
         {
@@ -124,8 +124,7 @@ public static partial class RideParser
             {
                 if (speed is not null)
                     return Fail("Snelheid staat er meer dan één keer in.");
-                speedText = speedMatch.Groups[1].Value;
-                speed = ParseNumber(speedText);
+                speed = ParseNumber(speedMatch.Groups[1].Value);
                 if (speed is < MinSpeedKmh or > MaxSpeedKmh)
                     return Fail($"Snelheid moet tussen {MinSpeedKmh:0} en {MaxSpeedKmh:0} km/u liggen.");
             }
@@ -161,25 +160,25 @@ public static partial class RideParser
         }
         else if (duration is int typedSeconds && speed is double typedSpeed)
         {
-            mismatch = !TimeAndSpeedMatch(distance, distanceText, typedSeconds, typedSpeed, speedText!);
+            mismatch = !TimeAndSpeedMatch(distance, distanceText, typedSeconds, typedSpeed);
         }
 
         return new ParseResult.Success(new Ride(rideDate, distance, duration, speed), mismatch);
     }
 
     /// <summary>
-    /// Whether the typed speed fits the typed distance and time, assuming distance and speed were rounded to
-    /// the digits typed (so <c>20km</c> may be 19.5–20.5), the time may be off by a second, plus
-    /// <see cref="MismatchTolerance"/>.
+    /// Whether the typed speed fits the typed distance and time, allowing the distance to be rounded to the
+    /// digits typed (so <c>20km</c> may be 19.5–20.5), the time to be off by
+    /// <see cref="MismatchTimeMarginSeconds"/> and the speed by <see cref="MismatchSpeedMarginKmh"/>.
     /// </summary>
-    private static bool TimeAndSpeedMatch(
-        double distance, string distanceText, int seconds, double speed, string speedText)
+    private static bool TimeAndSpeedMatch(double distance, string distanceText, int seconds, double speed)
     {
         var distanceMargin = RoundingMargin(distanceText);
-        var speedMargin = RoundingMargin(speedText);
-        var slowest = (distance - distanceMargin) / ((seconds + 1) / 3600.0) * (1 - MismatchTolerance);
-        var fastest = (distance + distanceMargin) / (Math.Max(seconds - 1, 0.5) / 3600.0) * (1 + MismatchTolerance);
-        return speed + speedMargin >= slowest && speed - speedMargin <= fastest;
+        var longestHours = (seconds + MismatchTimeMarginSeconds) / 3600.0;
+        var shortestHours = Math.Max(seconds - MismatchTimeMarginSeconds, 1) / 3600.0;
+        var slowest = (distance - distanceMargin) / longestHours;
+        var fastest = (distance + distanceMargin) / shortestHours;
+        return speed + MismatchSpeedMarginKmh >= slowest && speed - MismatchSpeedMarginKmh <= fastest;
     }
 
     /// <summary>Half a unit of the last typed digit: 0.5 for "20", 0.05 for "20,5".</summary>

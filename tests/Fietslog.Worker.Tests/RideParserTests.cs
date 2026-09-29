@@ -98,17 +98,19 @@ public class RideParserTests
     }
 
     [Theory]
-    // Matching within rounding of the typed digits
+    // Within margin: distance rounded to its typed digits, time ±1 minute, speed ±0.5 km/h
     [InlineData("20km@52:34@22,8km/u", false)]      // exact: 22.83
-    [InlineData("20km@52:12@24km/h", false)]        // 20 km may be 20.5 -> 23.57, 24 may be 23.5
-    [InlineData("20km@52:34@23,5km/u", false)]      // 20 km may be 20.5 -> 23.40, plus 1%
+    [InlineData("20km@52:12@24km/h", false)]
     [InlineData("20,5km@1:02:10@19,8km/u", false)]  // exact: 19.79
-    [InlineData("20,0km@52:34@22,7km/u", false)]    // device truncated 22.83 to 22.7
+    [InlineData("20km@52:34@24km/u", false)]        // 20.5 km in 51:34 is 23.85; 24 may be 23.5
+    [InlineData("20km@52:34@21,5km/u", false)]      // 19.5 km in 53:34 is 21.84; 21.5 may be 22.0
+    [InlineData("20,0km@51:34@22,8km/u", false)]    // time read a minute off
     [InlineData("20km@24km/h@52:12", false)]        // order does not matter
-    // Not matching
-    [InlineData("20,00km@52:34@23,5km/u", true)]    // precise distance leaves no room: 22.83
+    // Outside margin
+    [InlineData("20,00km@52:34@24km/u", true)]      // precise distance: at most 23.28 in 51:34
+    [InlineData("20,0km@48:34@22,8km/u", true)]     // at least 24.15 in 49:34
     [InlineData("20km@52:34@25km/u", true)]
-    [InlineData("20km@52:34@20km/u", true)]
+    [InlineData("20km@52:34@21km/u", true)]
     [InlineData("20km@52:34@60km/u", true)]
     [InlineData("16km@1:05@24km/u", true)]          // 1:05 is 65 seconds
     public void Flags_typed_time_and_speed_that_do_not_match(string input, bool mismatch)
