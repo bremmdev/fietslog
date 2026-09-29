@@ -20,6 +20,10 @@ public static partial class RideParser
 {
     public const double MaxDistanceKm = 1000;
 
+    // Plausible average cycling speeds; catches typos such as 1:05 meant as 1 hour 5 minutes.
+    public const double MinSpeedKmh = 1;
+    public const double MaxSpeedKmh = 100;
+
     private const string Number = @"(\d+(?:[.,]\d+)?)";
 
     [GeneratedRegex(@"\s*@\s*")]
@@ -113,8 +117,8 @@ public static partial class RideParser
                 if (speed is not null)
                     return Fail("Snelheid staat er meer dan één keer in.");
                 speed = ParseNumber(speedMatch.Groups[1].Value);
-                if (speed <= 0)
-                    return Fail("Snelheid moet groter dan 0 zijn.");
+                if (speed is < MinSpeedKmh or > MaxSpeedKmh)
+                    return Fail($"Snelheid moet tussen {MinSpeedKmh:0} en {MaxSpeedKmh:0} km/u liggen.");
             }
             else if (Duration().Match(part) is { Success: true } durationMatch)
             {
@@ -132,9 +136,19 @@ public static partial class RideParser
 
         // Derive the missing one; when both are given they are kept as typed.
         if (duration is int s && speed is null)
+        {
             speed = Math.Round(distance / (s / 3600.0), 2);
+            if (speed is < MinSpeedKmh or > MaxSpeedKmh)
+                return Fail(
+                    $"Berekende snelheid van {FormatNumber(speed.Value)} km/u ligt niet tussen {MinSpeedKmh:0} en {MaxSpeedKmh:0} km/u. " +
+                    "Controleer afstand en tijd (mm:ss of u:mm:ss).");
+        }
         else if (speed is double v && duration is null)
+        {
             duration = (int)Math.Round(distance / v * 3600);
+            if (duration < 1)
+                return Fail("Berekende tijd is korter dan 1 seconde. Controleer afstand en snelheid.");
+        }
 
         return new ParseResult.Success(new Ride(rideDate, distance, duration, speed));
     }
@@ -164,6 +178,9 @@ public static partial class RideParser
 
     private static double ParseNumber(string value) =>
         double.Parse(value.Replace(',', '.'), NumberStyles.AllowDecimalPoint, CultureInfo.InvariantCulture);
+
+    private static string FormatNumber(double value) =>
+        value.ToString("0.#", CultureInfo.InvariantCulture).Replace('.', ',');
 
     private static ParseResult.Failure Fail(string error) => new(error);
 }

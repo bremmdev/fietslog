@@ -20,9 +20,14 @@ public class RideParserTests
         { "16km 2026-09-28", "2026-09-28", 16, null, null },
         { "  20KM @ 52:34  ", "2026-09-28", 20, 3154, 22.83 },
         { "20 km@23,3 km/u", "2026-09-28", 20, 3090, 23.3 },
-        { "16km@1:05", "2026-09-28", 16, 65, 886.15 },
+        { "16km@40:00", "2026-09-28", 16, 2400, 24 },
         { "20km@75:00", "2026-09-28", 20, 4500, 16 },
         { "1000km", "2026-09-28", 1000, null, null },
+        // speed limits are inclusive
+        { "1km@1km/h", "2026-09-28", 1, 3600, 1 },
+        { "20km@100km/u", "2026-09-28", 20, 720, 100 },
+        { "100km@1:00:00", "2026-09-28", 100, 3600, 100 },
+        { "1km@1:00:00", "2026-09-28", 1, 3600, 1 },
     };
 
     [Theory]
@@ -54,6 +59,15 @@ public class RideParserTests
     [InlineData("20km@1:60:00")]
     [InlineData("20km@0:00")]
     [InlineData("20km@0km/h")]
+    [InlineData("20km@0,5km/h")]
+    [InlineData("20km@100,1km/h")]
+    [InlineData("20km@52:34@101km/h")]
+    [InlineData("1000km@0,0001km/u")]
+    [InlineData("1km@9999km/u")]
+    [InlineData("16km@1:05")]
+    [InlineData("1km@0:01")]
+    [InlineData("20km@100:00:00")]
+    [InlineData("0,001km@100km/u")]
     [InlineData("20km@fast")]
     [InlineData("20km@")]
     [InlineData("20km@52:34@53:00")]
@@ -78,8 +92,16 @@ public class RideParserTests
     [Fact]
     public void Two_part_time_is_minutes_and_seconds()
     {
-        var ride = Assert.IsType<ParseResult.Success>(RideParser.Parse("10km@1:05", Today)).Ride;
+        var ride = Assert.IsType<ParseResult.Success>(RideParser.Parse("1km@3:05", Today)).Ride;
 
-        Assert.Equal(65, ride.DurationSeconds);
+        Assert.Equal(185, ride.DurationSeconds);
+    }
+
+    [Fact]
+    public void Implausible_computed_speed_is_reported()
+    {
+        var failure = Assert.IsType<ParseResult.Failure>(RideParser.Parse("16km@1:05", Today));
+
+        Assert.StartsWith("Berekende snelheid van 886,2 km/u ligt niet tussen 1 en 100 km/u.", failure.Error);
     }
 }

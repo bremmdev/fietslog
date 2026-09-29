@@ -40,6 +40,7 @@ A message contains one ride token and, optionally, one date token, separated by 
 A message is rejected, with a Dutch error reply, when:
 - it has no distance, or the distance is not in the range 0–1000 km
 - a duration or speed appears more than once, or cannot be parsed (for example, seconds ≥ 60)
+- the typed or computed average speed is not in the range 1–100 km/h, or a computed duration is under 1 second
 - the date is invalid or in the future
 - it contains unknown extra tokens
 

@@ -19,7 +19,7 @@ Send the bot a message in this form:
 | `20,5km@1:02:10 30-08-2026` | on 30 August 2026 |
 
 - **Time:** `mm:ss` or `h:mm:ss`. A two-part time is always minutes:seconds, so `1:05` is 65 seconds.
-- **Speed:** `km/h` or `km/u`. Decimal commas and points both work.
+- **Speed:** `km/h` or `km/u`. Decimal commas and points both work. Typed and computed speeds must be 1–100 km/h, so a slip like `16km@1:05` (65 seconds) is rejected instead of stored.
 - **Date:** `yyyy-mm-dd` or `dd-mm-yyyy`. It defaults to today in Europe/Amsterdam time. Future dates are rejected.
 - **Replies:** the bot confirms every save in Dutch. `/help` shows the format.
 - **Access:** messages from anyone other than `Bot__AllowedUserId` are ignored.
