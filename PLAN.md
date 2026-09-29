@@ -32,10 +32,10 @@ A message contains one ride token and, optionally, one date token, separated by 
 | Input | Stored |
 |---|---|
 | `16km` | 16 km, today, no duration, no speed |
-| `20km@52:34` | 20 km, 3154 s, speed **computed** as 22.83 km/h |
+| `20km@52:34` | 20 km, 3154 s, speed **computed** as 22.8 km/h |
 | `20km@23.3km/h` | 20 km, 23.3 km/h, duration **computed** as 3090 s |
 | `20km@52:12@24km/h` | 20 km, 3132 s, 24 km/h, **both as given**, warning if they don't match |
-| `20,5km@1:02:10 30-08-2026` | 20.5 km, 3730 s, 19.79 km/h (computed), 2026-08-30 |
+| `20,5km@1:02:10 30-08-2026` | 20.5 km, 3730 s, 19.8 km/h (computed), 2026-08-30 |
 
 A message is rejected, with a Dutch error reply, when:
 - it has no distance, or the distance is not in the range 0–1000 km
@@ -138,7 +138,7 @@ Backups are out of scope. Later options include `railway volume` snapshots or a 
 ## Testing
 
 - **Parser**: table-driven xUnit cases covering every example above, decimal comma, `km/u`, both date formats, `@` in either order, `1:05` = 65 s, and invalid inputs such as `52:75`, duplicate parts, future dates and missing `km`.
-- **Derivation**: rounding of computed speed (2 decimals) and duration (whole seconds).
+- **Derivation**: rounding of computed speed (1 decimal) and duration (whole seconds).
 - **Repository**: insert into a temp database file. A second insert with the same message ID is a no-op.
 - **Manual**: run locally with a test bot token (`dotnet run`), send the examples and check the rows with `sqlite3`.
 

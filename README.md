@@ -1,6 +1,6 @@
 # Fietslog
 
-A small .NET 10 background worker that logs bike rides sent to a Telegram bot. It stores them in SQLite and runs on Railway with the database on a volume. The design is described in [PLAN.md](PLAN.md).
+A small .NET 10 background worker that logs bike rides sent to a Telegram bot. It stores them in SQLite and runs on Railway with the database on a volume.
 
 ## Sending rides
 
@@ -10,13 +10,13 @@ Send the bot a message in this form:
 <distance>km[@time][@speed] [date]
 ```
 
-| Message | Stored |
-|---|---|
-| `16km` | 16 km today |
-| `20km@52:34` | 20 km, 52:34, speed computed (22.83 km/h) |
-| `20km@23,3km/u` | 20 km, 23.3 km/h, time computed (51:30) |
-| `20km@52:12@24km/h` | both stored as given, with a warning if they don't match |
-| `20,5km@1:02:10 30-08-2026` | on 30 August 2026 |
+| Message                     | Stored                                   |
+| --------------------------- | ---------------------------------------- |
+| `16km`                      | 16 km today                              |
+| `20km@52:34`                | 20 km, 52:34, speed computed (22.8 km/h) |
+| `20km@23,3km/u`             | 20 km, 23.3 km/h, time computed (51:30)  |
+| `20km@52:12@24km/h`         | both stored as given, with a warning if they don't match |
+| `20,5km@1:02:10 30-08-2026` | on 30 August 2026                        |
 
 - **Time:** `mm:ss` or `h:mm:ss`. A two-part time is always minutes:seconds, so `1:05` is 65 seconds.
 - **Speed:** `km/h` or `km/u`. Decimal commas and points both work. Typed and computed speeds must be 1–100 km/h, so a slip like `16km@1:05` (65 seconds) is rejected instead of stored.
@@ -31,12 +31,12 @@ Send the bot a message in this form:
 
 ### Configuration
 
-| Environment variable | Required | Default |
-|---|---|---|
-| `Bot__Token` | yes | none |
-| `Bot__AllowedUserId` | yes | none |
-| `Bot__DatabasePath` | no | `/data/fietslog.db` (`data/fietslog.db` in Development) |
-| `Bot__TimeZone` | no | `Europe/Amsterdam` |
+| Environment variable | Required | Default                                                 |
+| -------------------- | -------- | ------------------------------------------------------- |
+| `Bot__Token`         | yes      | none                                                    |
+| `Bot__AllowedUserId` | yes      | none                                                    |
+| `Bot__DatabasePath`  | no       | `/data/fietslog.db` (`data/fietslog.db` in Development) |
+| `Bot__TimeZone`      | no       | `Europe/Amsterdam`                                      |
 
 The worker exits at startup with a non-zero code if the token or user ID is missing, if the token isn't in BotFather's `123456:ABC...` format, or if Telegram rejects the token. If Telegram rejects the token later, for example because you revoked it in @BotFather, the worker also stops with a non-zero code. If Telegram can't be reached, the worker keeps running and retrying.
 
@@ -80,10 +80,37 @@ Notes:
 
 ## Data
 
+All rides are stored in one SQLite table:
+
 ```sql
-rides(id, ride_date 'yyyy-mm-dd', distance_km, duration_seconds, avg_speed_kmh,
-      raw_text, telegram_chat_id, telegram_message_id, created_at_utc)
+CREATE TABLE rides (
+    id                   INTEGER PRIMARY KEY AUTOINCREMENT,
+    ride_date            TEXT    NOT NULL,
+    distance_km          REAL    NOT NULL,
+    duration_seconds     INTEGER NULL,
+    avg_speed_kmh        REAL    NULL,
+    raw_text             TEXT    NOT NULL,
+    telegram_chat_id     INTEGER NOT NULL,
+    telegram_message_id  INTEGER NOT NULL,
+    created_at_utc       TEXT    NOT NULL,
+    UNIQUE (telegram_chat_id, telegram_message_id)
+);
+CREATE INDEX ix_rides_ride_date ON rides (ride_date);
 ```
+
+| Field                 | Type    | Description                                                                 |
+| --------------------- | ------- | --------------------------------------------------------------------------- |
+| `id`                  | integer | Auto-incrementing primary key.                                              |
+| `ride_date`           | text    | Date of the ride as `yyyy-mm-dd`.                                           |
+| `distance_km`         | real    | Distance in kilometres.                                                     |
+| `duration_seconds`    | integer | Ride time in seconds. `NULL` when neither time nor speed was given.         |
+| `avg_speed_kmh`       | real    | Average speed in km/h. When computed, it's rounded to 1 decimal. `NULL` when neither time nor speed was given. |
+| `raw_text`            | text    | The message exactly as you sent it.                                         |
+| `telegram_chat_id`    | integer | Telegram chat the message came from.                                        |
+| `telegram_message_id` | integer | Telegram message ID, unique per chat.                                       |
+| `created_at_utc`      | text    | Time the ride was saved, as an ISO 8601 UTC timestamp.                      |
+
+The schema version is tracked with `PRAGMA user_version` (currently `1`).
 
 - **Time and speed:** when you give only one, the other is computed and stored. When you give both, both are stored as typed. If they don't match the distance, the reply includes a warning. The check is loose on purpose, so small differences don't trigger it. The distance may be off by half its last typed digit (`20km` could be 19.5–20.5), the time by 1 minute, and the speed by 0.5 km/h.
 - **Original message:** `raw_text` always keeps what you typed.

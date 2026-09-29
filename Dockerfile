@@ -4,7 +4,7 @@ WORKDIR /src
 COPY src/Fietslog.Worker/Fietslog.Worker.csproj src/Fietslog.Worker/
 RUN dotnet restore src/Fietslog.Worker/Fietslog.Worker.csproj
 COPY src/ src/
-RUN dotnet publish src/Fietslog.Worker/Fietslog.Worker.csproj -c Release -o /app --no-restore
+RUN dotnet publish src/Fietslog.Worker/Fietslog.Worker.csproj -c Release -o /app --no-restore -p:UseAppHost=false
 
 # Run. The regular (non-chiseled) runtime image includes tzdata for Europe/Amsterdam.
 FROM mcr.microsoft.com/dotnet/runtime:10.0

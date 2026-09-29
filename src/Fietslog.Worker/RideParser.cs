@@ -146,7 +146,7 @@ public static partial class RideParser
         var mismatch = false;
         if (duration is int s && speed is null)
         {
-            speed = Math.Round(distance / (s / 3600.0), 2);
+            speed = Math.Round(distance / (s / 3600.0), 1);
             if (speed is < MinSpeedKmh or > MaxSpeedKmh)
                 return Fail(
                     $"Berekende snelheid van {FormatNumber(speed.Value)} km/u ligt niet tussen {MinSpeedKmh:0} en {MaxSpeedKmh:0} km/u. " +

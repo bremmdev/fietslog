@@ -7,7 +7,7 @@ public class MessagesTests
     [Fact]
     public void Describes_ride_in_dutch_format()
     {
-        var ride = new Ride(new DateOnly(2026, 9, 28), 20, 3154, 22.83);
+        var ride = new Ride(new DateOnly(2026, 9, 28), 20, 3154, 22.8);
 
         Assert.Equal("20 km op 28-09-2026 · 52:34 · 22,8 km/u", Messages.Describe(ride));
     }

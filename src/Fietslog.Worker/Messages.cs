@@ -9,10 +9,10 @@ public static class Messages
 
     public const string Help =
         """
-        Stuur een rit als: <afstand>km[@tijd][@snelheid] [datum]
+        Log een rit als: <afstand>km[@tijd][@snelheid] [datum]
 
-        • Tijd: mm:ss (52:34) of u:mm:ss (1:05:12)
-        • Snelheid: 23,3km/u of 23.3km/h
+        • Tijd: mm:ss (52:34) of h:mm:ss (1:05:12)
+        • Snelheid: bijv. 23,3km/u of 23.3km/h
         • Datum (optioneel, standaard vandaag): 30-08-2026 of 2026-08-30
 
         Voorbeelden:
